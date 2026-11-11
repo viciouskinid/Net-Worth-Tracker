@@ -36,6 +36,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}.account-action
 tr.tx.hc td{border-bottom:0;padding-bottom:2px}tr.cm td{padding:0 8px 8px}.cin{padding:4px 8px;font-size:12px;border-color:#e3e8ee;background:#fafbfc}tr.flash td{background:#fff3c4}.chart-box svg{cursor:pointer}
 tr.cm td.ctext{font-size:12px;color:var(--muted);padding:0 8px 8px 26px;white-space:pre-wrap}tr.tx{cursor:context-menu}
 .chk{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:500;margin:0 14px 6px 0;cursor:pointer;color:var(--ink)}.chk input{width:auto;margin:0}.chk i{display:inline-block;width:10px;height:10px;border-radius:2px}#chPick{margin-bottom:6px;display:flex;flex-wrap:wrap;align-items:center}#chPick button{padding:4px 9px;font-size:12px;margin:0 6px 6px 0}
+footer.buildbar{max-width:1120px;margin:0 auto;padding:0 16px 24px}.status-build{font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -98,6 +99,21 @@ tr.cm td.ctext{font-size:12px;color:var(--muted);padding:0 8px 8px 26px;white-sp
     <div id="backupStatus" class="status"></div>
   </section>
 </main>
+<footer class="buildbar">
+<script>
+/* BUILD STAMP: on EVERY code change set BUILD_STAMP to the current local time (YYYY-MM-DD HH:MM:SS).
+   If no clock is available set BUILD_STAMP = 'unknown' and increment BUILD_VERSION; with a clock set BUILD_VERSION = null. */
+const BUILD_STAMP   = '2026-11-11 21:14:05'; // BUILD_STAMP
+const BUILD_VERSION = null;                  // BUILD_VERSION
+const BUILD_NOTE    = 'AI had no clock access — version bumped.';
+</script>
+<span id="build" class="status-build" title="Build date and time (local)"></span>
+<script>
+document.getElementById('build').textContent = BUILD_STAMP !== 'unknown'
+  ? 'Build ' + BUILD_STAMP
+  : 'Build unknown · v' + BUILD_VERSION + ' (' + BUILD_NOTE + ')';
+</script>
+</footer>
 <script>
 (() => {
 'use strict';
@@ -131,7 +147,7 @@ function setPoint(a,date,bal){a.history=(a.history||[]).filter(p=>p.date!==date)
 function split(type,b){b=Number(b)||0;if(type==='liability')return b<0?[-b,0]:[0,b];return b<0?[0,-b]:[b,0];}
 function totals(){let assets=0,liabilities=0;for(const a of state.accounts){const[s,l]=split(a.type,a.balance);assets+=s;liabilities+=l;}return{assets,liabilities};}
 function render(){
- recalc();const t=totals();
+ normalise();recalc();const t=totals();
  $('netWorth').textContent=money(t.assets-t.liabilities);$('assets').textContent=money(t.assets);$('liabilities').textContent=money(t.liabilities);
  $('transactionCount').textContent=state.transactions.length;$('accountCount').textContent=state.accounts.length+' account'+(state.accounts.length===1?'':'s');
  const list=$('accountsList');
@@ -314,8 +330,9 @@ $('csvFile').addEventListener('change',async e=>{
 });
 $('exportBtn').addEventListener('click',()=>{
  // Combined canonical CSV: account name is added so rows remain attributable after concatenation.
- const header=['Account','Date','Amount','Description','Balance','Comment'];
- const rows=state.transactions.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(t=>[state.accounts.find(a=>a.id===t.accountId)?.name||'Deleted account',t.date,t.amount,t.description,t.balance??'',t.comment||'']);
+ const header=['Account','Date','Amount','Description','Balance','Comment','Type','Kind'];
+ const bals=state.accounts.flatMap(a=>(a.history||[]).map(h=>[a.name,h.date,'','Reported balance',h.balance,'',a.type,'balance']));
+ const rows=bals.concat(state.transactions.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(t=>{const a=state.accounts.find(x=>x.id===t.accountId)||{};return[a.name||'Deleted account',t.date,t.amount,t.description,t.balance??'',t.comment||'',a.type||'','']}));
  const csv=[header,...rows].map(r=>r.map(v=>{const s=String(v??'');return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(',')).join('\r\n');
  download(csv,'combined-transactions.csv','text/csv;charset=utf-8');
 });
@@ -339,23 +356,29 @@ $('combinedFile').addEventListener('change',async e=>{
  const f=e.target.files[0];if(!f)return;const out=$('combinedStatus');out.textContent='';
  try{
   const rows=parseCSV((await f.text()).replace(/^\uFEFF/,'')),h=(rows[0]||[]).map(norm),ix=n=>h.indexOf(n);
-  const ci=ix('account'),di=ix('date'),ai=ix('amount'),si=ix('description'),bi=ix('balance'),cmi=ix('comment');
+  const ci=ix('account'),di=ix('date'),ai=ix('amount'),si=ix('description'),bi=ix('balance'),cmi=ix('comment'),typi=ix('type'),ki=ix('kind');
   if(ci<0||di<0||ai<0)throw Error('expected the columns Account, Date, Amount, Description, Balance (the file from "Download combined CSV").');
   const keys=new Map(state.transactions.map(x=>[stableKey(x),x])),byName=new Map(state.accounts.map(a=>[a.name.trim().toLowerCase(),a])),created=[];
-  let added=0,dupes=0,skipped=0;const stats={};
+  let added=0,dupes=0,skipped=0,balAdded=0,balDupes=0;const stats={};const mk=(name,typ)=>{const a={id:id(),name,type:typ==='liability'?'liability':'asset',balance:0,balanceDate:today(),history:[],_t:!!typ};state.accounts.push(a);byName.set(name.toLowerCase(),a);created.push(a);return a;};
   for(let i=1;i<rows.length;i++){const r=rows[i],name=String(r[ci]??'').trim(),date=parseDate(r[di]),amount=num(r[ai]);
+   const kind=ki>=0?String(r[ki]??'').trim().toLowerCase():'',typ=typi>=0?String(r[typi]??'').trim().toLowerCase():'';
+   if(kind==='balance'){ // a reported balance, not a transaction
+    const bv=bi>=0?num(r[bi]):NaN;if(!name||name==='Deleted account'||!date||!Number.isFinite(bv)){skipped++;continue;}
+    const a=byName.get(name.toLowerCase())||mk(name,typ);
+    if(a.history.some(h=>h.date===date))balDupes++;else{a.history.push({date,balance:a.type==='liability'?Math.abs(bv):bv});balAdded++;}
+    continue;}
    if(!name||name==='Deleted account'||!date||!Number.isFinite(amount)){skipped++;continue;}
    let a=byName.get(name.toLowerCase());
-   if(!a){a={id:id(),name,type:'asset',balance:0,balanceDate:today(),history:[]};state.accounts.push(a);byName.set(name.toLowerCase(),a);created.push(a);}
+   if(!a)a=mk(name,typ);
    const st=stats[a.id]||(stats[a.id]={a,prev:accStats(a.id),added:0,dupes:0,min:'9',max:''});if(date<st.min)st.min=date;if(date>st.max)st.max=date;
    const cm=cmi>=0?String(r[cmi]??'').trim():'',bal=bi>=0?num(r[bi]):NaN;
    const t={id:id(),accountId:a.id,date,amount,description:si>=0?String(r[si]??'').trim():'',balance:Number.isFinite(bal)?bal:null,comment:cm,source:f.name};
    const k=stableKey(t);if(keys.has(k)){dupes++;st.dupes++;if(cm&&!keys.get(k).comment)keys.get(k).comment=cm;continue;}keys.set(k,t);state.transactions.push(t);added++;st.added++;}
   // New accounts take their type and balance from their latest imported running balance.
-  for(const a of created){const l=dayEnds(a.id).pop();if(l){a.type=l.balance<0?'liability':'asset';a.balance=a.type==='liability'?Math.abs(l.balance):l.balance;a.balanceDate=l.date;a.history=[{date:l.date,balance:a.balance}];}}
+  for(const a of created){if(!a.history.length){const l=dayEnds(a.id).pop();if(l){if(!a._t)a.type=l.balance<0?'liability':'asset';a.balance=a.type==='liability'?Math.abs(l.balance):l.balance;a.balanceDate=l.date;a.history=[{date:l.date,balance:a.balance}];}}delete a._t;}
   save();render();
   importPopup(added,dupes,Object.values(stats).some(x=>x.prev.n),Object.values(stats).map(x=>overlapNote(x.a.name,x.prev,x.added,x.dupes,x.min,x.max)).join(''));
-  out.textContent=importMsg(added,dupes)+(skipped?` ${skipped} row(s) ignored.`:'')+Object.values(stats).map(x=>overlapNote(x.a.name,x.prev,x.added,x.dupes,x.min,x.max)).join('')+(created.length?`\nCreated ${created.length} new account(s): ${created.map(a=>a.name+' ('+(a.type==='liability'?'liability':'asset')+')').join(', ')}. Check their type and balance above.`:'');
+  out.textContent=importMsg(added,dupes)+(balAdded?` ${balAdded} reported balance(s) added.`:'')+(balDupes?` ${balDupes} reported balance(s) already existed for that date and were kept.`:'')+(skipped?` ${skipped} row(s) ignored.`:'')+Object.values(stats).map(x=>overlapNote(x.a.name,x.prev,x.added,x.dupes,x.min,x.max)).join('')+(created.length?`\nCreated ${created.length} new account(s): ${created.map(a=>a.name+' ('+(a.type==='liability'?'liability':'asset')+')').join(', ')}. Check their type and balance above.`:'');
  }catch(err){out.textContent='Could not import: '+err.message;}
  e.target.value='';
 });
