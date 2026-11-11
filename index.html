@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personal Net Worth Tracker</title>
+<style>
+:root{--bg:#f4f6f8;--panel:#fff;--ink:#17212b;--muted:#667381;--line:#dce2e8;--accent:#2457c5;--good:#16804a;--bad:#b42318;--soft:#edf2ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+header{background:#172b4d;color:#fff;padding:22px max(18px,calc((100% - 1120px)/2))}
+header h1{margin:0 0 4px;font-size:24px}header p{margin:0;color:#d7e0ef}
+main{max-width:1120px;margin:22px auto;padding:0 16px 50px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.card,.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:0 2px 8px #15223808}
+.metric .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}.metric .value{font-size:25px;font-weight:750;margin-top:4px}
+section{margin-top:18px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}h2{font-size:18px;margin:0}
+button,.button{border:0;border-radius:8px;padding:9px 13px;background:var(--accent);color:white;font-weight:650;cursor:pointer;font-size:14px}
+button.secondary{background:#e9edf3;color:#243244}button.danger{background:#fff0ef;color:var(--bad)}button:disabled{opacity:.45;cursor:not-allowed}
+input,select{width:100%;border:1px solid #cbd3dc;border-radius:7px;padding:9px 10px;background:white;color:var(--ink);font:inherit}
+label{display:block;font-size:13px;color:#44515e;font-weight:650;margin:9px 0 5px}
+.formgrid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:10px;align-items:end}
+.small{font-size:12px;color:var(--muted)}.muted{color:var(--muted)}.positive{color:var(--good)}.negative{color:var(--bad)}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}.account-actions{display:flex;gap:6px;flex-wrap:wrap}.account-actions button{padding:6px 9px;font-size:12px}
+.account-row{display:grid;grid-template-columns:1fr 150px 130px 130px auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.account-row:last-child{border-bottom:0}.account-name{font-weight:700}.pill{display:inline-block;padding:3px 7px;border-radius:20px;background:#edf1f5;color:#465463;font-size:11px}
+.drop{border:2px dashed #b8c5d3;border-radius:10px;padding:18px;text-align:center;background:#fafcff}
+.notice{padding:11px 13px;background:#f0f5ff;border-radius:8px;color:#314b79;font-size:13px;margin-top:10px}
+.status{font-size:13px;margin-top:9px;white-space:pre-wrap}.hidden{display:none!important}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap}.table-wrap{overflow:auto}
+@media(max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}.formgrid{grid-template-columns:1fr 1fr}.formgrid button{grid-column:span 2}.account-row{grid-template-columns:1fr 1fr}.account-row .account-actions{grid-column:span 2}.account-row .account-name{grid-column:span 2}}
+@media(max-width:420px){.grid{grid-template-columns:1fr 1fr}.metric .value{font-size:21px}}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.chart-box{position:relative;min-width:0}.chart-box h3{font-size:14px;margin:0 0 6px}.chart-box svg{width:100%;height:auto;display:block}
+.tip{position:absolute;top:30px;pointer-events:none;background:#172b4d;color:#fff;font-size:12px;padding:6px 8px;border-radius:6px;white-space:nowrap;z-index:5;line-height:1.5}.tip i,.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted);margin-top:4px}.range button{padding:5px 10px;font-size:12px}.range button.on{background:var(--accent);color:#fff}
+@media(max-width:760px){.chart-grid{grid-template-columns:1fr}}
+tr.tx.hc td{border-bottom:0;padding-bottom:2px}tr.cm td{padding:0 8px 8px}.cin{padding:4px 8px;font-size:12px;border-color:#e3e8ee;background:#fafbfc}tr.flash td{background:#fff3c4}.chart-box svg{cursor:pointer}
+tr.cm td.ctext{font-size:12px;color:var(--muted);padding:0 8px 8px 26px;white-space:pre-wrap}tr.tx{cursor:context-menu}
+.chk{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:500;margin:0 14px 6px 0;cursor:pointer;color:var(--ink)}.chk input{width:auto;margin:0}.chk i{display:inline-block;width:10px;height:10px;border-radius:2px}#chPick{margin-bottom:6px;display:flex;flex-wrap:wrap;align-items:center}#chPick button{padding:4px 9px;font-size:12px;margin:0 6px 6px 0}
+</style>
+</head>
+<body>
+<header><h1>Personal Net Worth Tracker</h1><p>Import account transactions, maintain balances, and track your net worth locally.</p></header>
+<main>
+  <div class="grid">
+    <div class="card metric"><div class="label">Net worth</div><div class="value" id="netWorth">$0.00</div><div class="small">Assets minus liabilities</div></div>
+    <div class="card metric"><div class="label">Assets</div><div class="value positive" id="assets">$0.00</div><div class="small">Cash, savings, investments, property, etc.</div></div>
+    <div class="card metric"><div class="label">Liabilities</div><div class="value negative" id="liabilities">$0.00</div><div class="small">Credit cards, loans, mortgage, etc.</div></div>
+    <div class="card metric"><div class="label">Transactions</div><div class="value" id="transactionCount">0</div><div class="small">Unique imported transactions</div></div>
+  </div>
+
+  <section class="panel">
+    <div class="section-head"><h2>Net worth over time</h2><div class="toolbar range" id="rangeBtns"><button class="secondary" data-r="3">3M</button><button class="secondary" data-r="6">6M</button><button class="secondary" data-r="12">1Y</button><button class="secondary on" data-r="0">All</button></div></div>
+    <div id="chPick"></div>
+    <div class="chart-box" id="chNet"></div>
+    <div class="chart-grid"><div class="chart-box" id="chAL"></div><div class="chart-box" id="chAcc"></div></div>
+    <div class="small" style="margin-top:10px">Each account's balance is built from the balances you reported (see Settings) plus the transactions imported between and after them. Each account counts from its first recorded date. Click a point on any chart to jump to that date in Transactions.</div>
+  </section>
+
+  <section class="panel">
+    <div class="section-head"><h2>Accounts and balances</h2><span class="small" id="accountCount">0 accounts</span></div>
+    <form id="accountForm">
+      <div class="formgrid">
+        <div><label for="accountName">Account name</label><input id="accountName" placeholder="e.g. CommBank Everyday" required></div>
+        <div><label for="accountType">Account type</label><select id="accountType"><option value="asset">Asset</option><option value="liability">Credit / liability</option></select></div>
+        <div><label for="accountBalance">Current balance ($)</label><input id="accountBalance" type="number" step="0.01" placeholder="0.00" required></div>
+        <div><label for="balanceDate">Balance as of</label><input id="balanceDate" type="date"></div>
+        <button type="submit">Add account</button>
+      </div>
+    </form>
+    <div class="notice">Enter the balance shown by your bank or provider. For a credit card or loan, set the account type to <b>Credit / liability</b> and enter the amount you owe (a negative balance such as -500 is treated the same as 500). Each balance you enter or edit is saved with its date to build the charts. <b>Import CSV</b> on an account accepts CommBank's four-column export (date, amount, description, balance) or CSVs with column headers; transactions imported after your latest reported balance date are added to it (subtracted for credit / liability accounts, where a negative amount is a purchase). Your reported balances are listed under Settings.</div>
+    <div id="accountsList" style="margin-top:12px"></div>
+    <input class="hidden" id="csvFile" type="file" accept=".csv,text/csv" multiple>
+    <div id="importStatus" class="status" aria-live="polite"></div>
+  </section>
+
+  <section class="panel" id="txSection">
+    <div class="section-head"><h2>Transactions</h2><div class="toolbar"><button class="secondary" id="exportBtn">Download combined CSV</button><button class="secondary" id="importCombinedBtn">Upload combined CSV</button><input class="hidden" id="combinedFile" type="file" accept=".csv,text/csv"><button class="secondary" id="exportJsonBtn">Backup data (JSON)</button></div></div>
+    <div id="combinedStatus" class="status" aria-live="polite" style="margin:0 0 10px"></div>
+    <div class="formgrid" style="grid-template-columns:2fr 1fr auto;margin-bottom:12px">
+      <div><label for="filterAccount">Filter account</label><select id="filterAccount"><option value="">All accounts</option></select></div>
+      <div><label for="filterSearch">Search description or comment</label><input id="filterSearch" placeholder="e.g. Coles"></div>
+      <div style="align-self:end"><button class="secondary" id="clearFilters">Clear filters</button></div>
+    </div>
+    <div class="small" id="transactionSummary" style="margin-bottom:8px"></div>
+    <div class="table-wrap"><table><thead><tr><th>Date</th><th>Account</th><th>Description</th><th class="num">Amount</th><th class="num">CSV balance</th></tr></thead><tbody id="transactionsBody"><tr><td colspan="5" class="muted">No transactions imported yet.</td></tr></tbody></table></div>
+  </section>
+  <section class="panel">
+    <div class="section-head"><h2>Settings</h2></div>
+    <div class="formgrid" style="grid-template-columns:1fr 2fr"><div><label for="savingsInput">Planned savings per fortnight ($)</label><input id="savingsInput" type="number" min="0" step="0.01" placeholder="0.00"></div><div class="small" style="align-self:end">Shown as a dashed line on the net worth chart, starting at the first visible point and rising by this amount every 14 days.</div></div>
+    <h3 style="font-size:15px;margin:18px 0 4px">Reported balances</h3>
+    <div class="small" style="margin-bottom:8px">The balances you entered, with their dates. Each account's current balance is its latest reported balance plus (or, for credit / liability accounts, minus) the transactions imported after that date. Edit a date or amount here, or delete a row. Use <b>Edit balance</b> on an account to add a new one. For liabilities, enter the amount owed.</div>
+    <div class="table-wrap"><table><thead><tr><th>Account</th><th>Date</th><th class="num">Balance ($)</th><th></th></tr></thead><tbody id="balancesBody"></tbody></table></div>
+  </section>
+  <section class="panel">
+    <div class="section-head"><h2>Data and privacy</h2></div>
+    <p class="small">Your accounts and transactions are stored in this browser's IndexedDB database (existing localStorage data is migrated automatically). Nothing is sent to a server. Data remains on this device and browser; clearing browser data can erase it. Use the JSON backup regularly, especially before changing devices or browsers.</p>
+    <div class="toolbar"><button class="secondary" id="importBackupBtn">Restore JSON backup</button><input class="hidden" id="backupFile" type="file" accept=".json,application/json"><button class="danger" id="resetBtn">Delete all local data</button></div>
+    <div id="backupStatus" class="status"></div>
+  </section>
+</main>
+<script>
+(() => {
+'use strict';
+const KEY='personalNetWorthTracker_v1';
+let state={accounts:[],transactions:[],settings:{savings:0}};
+const $=id=>document.getElementById(id);
+const money=n=>new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD'}).format(Number(n)||0);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+let importTarget='';
+// ---- IndexedDB storage ----
+let dbp;
+function openDB(){return dbp||(dbp=new Promise((res,rej)=>{if(!window.indexedDB)return rej(Error('IndexedDB unavailable'));const r=indexedDB.open('personalNetWorthTracker',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}));}
+async function idbGet(k){const db=await openDB();return new Promise((res,rej)=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});}
+async function idbSet(k,v){const db=await openDB();return new Promise((res,rej)=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=()=>res();t.onerror=t.onabort=()=>rej(t.error);});}
+let saveChain=Promise.resolve();
+function save(){const snap=JSON.parse(JSON.stringify(state));saveChain=saveChain.then(()=>idbSet('state',snap)).catch(e=>{console.error(e);alert('Could not save to the browser database. Export a JSON backup now so you do not lose data.');});}
+async function load(){
+ let x=null,migrated=false;
+ try{x=await idbGet('state');}catch(e){console.warn('IndexedDB read failed',e);}
+ if(!x){try{x=JSON.parse(localStorage.getItem(KEY)||'null');migrated=!!x;}catch(e){}}
+ if(x&&Array.isArray(x.accounts)&&Array.isArray(x.transactions)){state=x;normalise();if(migrated)save();}
+}
+// Liabilities store the amount owed as a positive number; every account keeps a dated balance history.
+function normalise(){state.settings=state.settings||{savings:0};for(const a of state.accounts){a.balance=Number(a.balance)||0;if(a.type==='liability')a.balance=Math.abs(a.balance);
+ if(!Array.isArray(a.history)||!a.history.length)a.history=[{date:a.balanceDate||today(),balance:a.balance}];
+ else if(a.type==='liability')a.history.forEach(p=>p.balance=Math.abs(p.balance));
+ a.history.sort((x,y)=>x.date.localeCompare(y.date));}}
+function setPoint(a,date,bal){a.history=(a.history||[]).filter(p=>p.date!==date);a.history.push({date,balance:bal});a.history.sort((x,y)=>x.date.localeCompare(y.date));const l=a.history[a.history.length-1];a.balance=l.balance;a.balanceDate=l.date;}
+// [assets, liabilities] contribution of one balance. A negative asset balance (overdrawn / credit-style) counts as a liability.
+function split(type,b){b=Number(b)||0;if(type==='liability')return b<0?[-b,0]:[0,b];return b<0?[0,-b]:[b,0];}
+function totals(){let assets=0,liabilities=0;for(const a of state.accounts){const[s,l]=split(a.type,a.balance);assets+=s;liabilities+=l;}return{assets,liabilities};}
+function render(){
+ recalc();const t=totals();
+ $('netWorth').textContent=money(t.assets-t.liabilities);$('assets').textContent=money(t.assets);$('liabilities').textContent=money(t.liabilities);
+ $('transactionCount').textContent=state.transactions.length;$('accountCount').textContent=state.accounts.length+' account'+(state.accounts.length===1?'':'s');
+ const list=$('accountsList');
+ if(!state.accounts.length)list.innerHTML='<p class="muted small">No accounts yet. Add your first account above.</p>';
+ else list.innerHTML=state.accounts.map(a=>`<div class="account-row"><div><div class="account-name">${esc(a.name)}</div><span class="pill">${a.type==='liability'?'Credit / liability':(a.balance<0?'Asset (negative, counted as liability)':'Asset')}</span><div class="small">Balance as of ${esc(a.balanceDate||'not set')}, calculated from the ${money(la(a).balance)} you reported on ${esc(la(a).date)} · ${state.transactions.filter(t=>t.accountId===a.id).length} transactions</div></div><div><div class="small">${a.type==='liability'?'Amount owed':'Current balance'}</div><b>${money(a.type==='liability'?Math.abs(a.balance):a.balance)}</b></div><div class="account-actions"><button class="secondary" data-edit="${a.id}">Edit balance</button></div><div class="account-actions"><button class="secondary" data-import="${a.id}">Import CSV</button></div><div class="account-actions"><button class="danger" data-delete="${a.id}">Delete</button></div></div>`).join('');
+ const opts=state.accounts.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('');
+ const filter=$('filterAccount').value;
+ $('filterAccount').innerHTML='<option value="">All accounts</option>'+opts;
+ if(state.accounts.some(a=>a.id===filter))$('filterAccount').value=filter;
+ renderTransactions();renderCharts();renderSettings();
+}
+let txLimit=1000;
+function txRows(){const aid=$('filterAccount').value,q=$('filterSearch').value.toLowerCase();return state.transactions.filter(t=>(!aid||t.accountId===aid)&&(!q||t.description.toLowerCase().includes(q)||(t.comment||'').toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date));}
+function renderTransactions(){
+ const rows=txRows();
+ $('transactionSummary').textContent=`Showing ${Math.min(rows.length,txLimit)} of ${rows.length} transactions`+(rows.length<state.transactions.length?` (${state.transactions.length} total)`:'')+' · right-click a transaction to add or edit its comment';
+ $('transactionsBody').innerHTML=rows.length?rows.slice(0,txLimit).map(t=>{const a=state.accounts.find(x=>x.id===t.accountId),d=esc(t.date);return `<tr class="tx${t.comment?' hc':''}" data-date="${d}" data-tid="${t.id}"><td>${d}</td><td>${esc(a?.name||'Deleted account')}</td><td>${esc(t.description)}</td><td class="num ${t.amount<0?'negative':'positive'}">${money(t.amount)}</td><td class="num">${t.balance==null?'—':money(t.balance)}</td></tr>`+(t.comment?`<tr class="cm" data-date="${d}" data-tid="${t.id}"><td colspan="5" class="ctext">↳ ${esc(t.comment)}</td></tr>`:'')}).join(''):'<tr><td colspan="5" class="muted">No matching transactions.</td></tr>';
+}
+function editComment(tid){
+ const t=state.transactions.find(x=>x.id===tid),tx=$('transactionsBody').querySelector(`tr.tx[data-tid="${tid}"]`);if(!t||!tx)return;
+ tx.classList.add('hc');let cm=tx.nextElementSibling;if(!cm||!cm.classList.contains('cm')){cm=document.createElement('tr');cm.className='cm';cm.dataset.date=tx.dataset.date;cm.dataset.tid=tid;tx.after(cm);}
+ cm.innerHTML='<td colspan="5"><input class="cin" placeholder="Add a comment…" aria-label="Comment"></td>';
+ const inp=cm.querySelector('input');inp.value=t.comment||'';inp.focus();
+ let done=false;const finish=ok=>{if(done)return;done=true;if(ok){t.comment=inp.value.trim();save();}renderTransactions();};
+ inp.addEventListener('keydown',e=>{if(e.key==='Enter')finish(true);else if(e.key==='Escape')finish(false);});
+ inp.addEventListener('blur',()=>finish(true));
+}
+// Jump from a chart point to the transactions on that date.
+function gotoTx(date){
+ let rows=txRows(),idx=rows.findIndex(t=>t.date===date);
+ if(idx<0&&($('filterAccount').value||$('filterSearch').value)){$('filterAccount').value='';$('filterSearch').value='';rows=txRows();idx=rows.findIndex(t=>t.date===date);}
+ if(idx<0){renderTransactions();$('transactionSummary').textContent=`No transactions are dated ${date}; this point comes from a reported balance.`;$('txSection').scrollIntoView({behavior:'smooth',block:'start'});return;}
+ txLimit=Math.max(1000,idx+100);renderTransactions();
+ const els=[...$('transactionsBody').querySelectorAll('tr')].filter(r=>r.dataset.date===date);
+ els[0].scrollIntoView({behavior:'smooth',block:'center'});els.forEach(r=>r.classList.add('flash'));setTimeout(()=>els.forEach(r=>r.classList.remove('flash')),2500);
+}
+// ---- history and charts ----
+let range=0;
+const COLORS=['#2457c5','#16804a','#b42318','#c77700','#7b3fb5','#0b8a9a','#a33a7a','#5c6b7a'];
+function dayEnds(aid){ // end-of-day running balance per date, from imported CSV rows
+ const by={};for(const t of state.transactions)if(t.accountId===aid&&t.balance!=null)(by[t.date]=by[t.date]||[]).push(t);
+ return Object.keys(by).sort().map(d=>{const L=by[d];let last=L[L.length-1];
+  if(L.length>1){const c=L.filter(i=>!L.some(j=>j!==i&&Math.abs(j.balance-(i.balance+j.amount))<.005));if(c.length===1)last=c[0];}
+  return{date:d,balance:last.balance};});
+}
+const sg=(a,x)=>a.type==='liability'?-x:x; // a negative amount on a card/loan increases what is owed
+const la=a=>a.history[a.history.length-1];
+const sav=()=>Number(state.settings&&state.settings.savings)||0;
+// Balance on any date = nearest reported balance at or before it (else the earliest one) +/- the transactions between the two.
+function points(a){
+ const H=(a.history||[]).slice().sort((x,y)=>x.date.localeCompare(y.date));if(!H.length)return[];
+ const T=state.transactions.filter(t=>t.accountId===a.id).sort((x,y)=>x.date.localeCompare(y.date));
+ const dates=[...new Set([...H.map(h=>h.date),...T.map(t=>t.date)])].sort(),cum={};let run=0,ti=0;
+ for(const d of dates){while(ti<T.length&&T[ti].date<=d)run+=sg(a,T[ti++].amount);cum[d]=run;}
+ return dates.map(d=>{let A=H[0];for(const h of H)if(h.date<=d)A=h;return[d,A.balance+cum[d]-cum[A.date]];});
+}
+function recalc(){for(const a of state.accounts){const p=points(a),l=p[p.length-1];if(l){a.balance=l[1];a.balanceDate=l[0];}}}
+function accStats(aid){const d=state.transactions.filter(t=>t.accountId===aid).map(t=>t.date).sort();return{n:d.length,min:d[0],max:d[d.length-1]};}
+function importPopup(added,dupes,hadData,note){
+ const m=[];
+ if(dupes)m.push(!added?`All ${dupes} transaction(s) in this file are already in the app. Nothing new was added.`:`${dupes} transaction(s) in this file are already in the app and were skipped; ${added} new transaction(s) were added.`+(hadData?' Some overlap with existing data is expected when importing into an account that already has data, and suggests nothing is missing.':''));
+ if(note)m.push(note.trim());
+ if(m.length)alert(m.join('\n\n'));
+}
+function importMsg(added,dupes){return !added&&dupes?`Nothing new: all ${dupes} transaction(s) in this file are already in the app.`:`Import complete: ${added} new transaction(s) added`+(dupes?`; ${dupes} already in the app (skipped)`:'')+'.';}
+function overlapNote(name,prev,added,dupes,fmin,fmax){return prev.n&&added&&!dupes?`\n⚠ "${name}": none of the ${added} imported transactions overlapped what was already stored (stored ${prev.min} to ${prev.max}; this file ${fmin} to ${fmax}). Importing into an account that already has data should always repeat a few existing rows, so some transactions between the two may be missing. Re-export with an earlier start date so the file overlaps the existing data.`:'';}
+function buildSeries(){
+ const P=state.accounts.map(a=>({a,p:points(a)})),all=new Set([today()]);P.forEach(x=>x.p.forEach(q=>all.add(q[0])));
+ let dates=[...all].sort();
+ if(range){const d=new Date();d.setMonth(d.getMonth()-range);const cut=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');dates=[cut,...dates.filter(x=>x>cut)];}
+ const rows=dates.map(date=>{let A=0,L=0;const per=P.map(({a,p})=>{let v=null;for(let i=p.length-1;i>=0;i--)if(p[i][0]<=date){v=p[i][1];break;}
+  if(v==null)return null;const[s,l]=split(a.type,v);A+=s;L+=l;return s-l;});return{date,A,L,per};}).filter(r=>r.per.some(v=>v!=null));
+ return{P,rows};
+}
+const fmtShort=new Intl.NumberFormat('en-AU',{notation:'compact',style:'currency',currency:'AUD',maximumFractionDigits:1});
+const fmtDate=t=>new Date(t).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'2-digit',timeZone:'UTC'});
+function lineChart(el,title,series,opt={}){
+ el.innerHTML=`<h3>${esc(title)}</h3>`;if(!series.length)return;
+ const W=Math.max(280,el.clientWidth||600),H=240,m={l:58,r:12,t:10,b:26};
+ const xs=series.flatMap(s=>s.pts.map(p=>p.t)),ys=series.flatMap(s=>s.pts.map(p=>p.v));
+ const x0=Math.min(...xs),x1=Math.max(...xs);let y0=Math.min(...ys),y1=Math.max(...ys);if(y0===y1){y0-=1;y1+=1;}
+ const pad=(y1-y0)*.08;y0-=pad;y1+=pad;
+ const raw=(y1-y0)/4,pw=Math.pow(10,Math.floor(Math.log10(raw))),st=[1,2,2.5,5,10].map(k=>k*pw).find(v=>v>=raw),ty0=Math.floor(y0/st)*st,ty1=Math.ceil(y1/st)*st;
+ const sx=t=>m.l+(t-x0)/((x1-x0)||1)*(W-m.l-m.r),sy=v=>m.t+(1-(v-ty0)/(ty1-ty0))*(H-m.t-m.b);
+ let g='';for(let v=ty0;v<=ty1+st/2;v+=st)g+=`<line x1="${m.l}" x2="${W-m.r}" y1="${sy(v)}" y2="${sy(v)}" stroke="#dce2e8"/><text x="${m.l-6}" y="${sy(v)+4}" text-anchor="end" font-size="11" fill="#667381">${fmtShort.format(v)}</text>`;
+ if(ty0<0&&ty1>0)g+=`<line x1="${m.l}" x2="${W-m.r}" y1="${sy(0)}" y2="${sy(0)}" stroke="#8a97a5"/>`;
+ for(let k=0;k<=4;k++){const t=x0+(x1-x0)*k/4;g+=`<text x="${sx(t)}" y="${H-8}" text-anchor="${k==0?'start':k==4?'end':'middle'}" font-size="11" fill="#667381">${fmtDate(t)}</text>`;}
+ for(const s of series){const d=s.pts.map((p,i)=>(i?'L':'M')+sx(p.t).toFixed(1)+','+sy(p.v).toFixed(1)).join('');
+  if(s.area)g+=`<path d="${d}L${sx(s.pts[s.pts.length-1].t)},${sy(Math.max(ty0,Math.min(0,ty1)))}L${sx(s.pts[0].t)},${sy(Math.max(ty0,Math.min(0,ty1)))}Z" fill="${s.color}" opacity=".1"/>`;
+  g+=`<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"${s.dash?' stroke-dasharray="6 4"':''}/>`;
+  if(!s.dash)g+=s.pts.map(p=>`<circle cx="${sx(p.t)}" cy="${sy(p.v)}" r="${s.pts.length<=40?2.5:s.pts.length<=150?2:1.4}" fill="${s.color}"/>`).join('');}
+ g+=`<line class="vl" y1="${m.t}" y2="${H-m.b}" stroke="#8a97a5" stroke-dasharray="3 3" style="display:none"/>`;
+ el.insertAdjacentHTML('beforeend',`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}">${g}</svg>`+(series.length>1?`<div class="legend">${series.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>`:''));
+ const tip=document.createElement('div');tip.className='tip hidden';el.appendChild(tip);
+ const svg=el.querySelector('svg'),vl=svg.querySelector('.vl'),ts=[...new Set(xs)].sort((a,b)=>a-b),maps=series.map(s=>new Map(s.pts.map(p=>[p.t,p.v])));
+ svg.addEventListener('mousemove',ev=>{const r=svg.getBoundingClientRect(),t=x0+((ev.clientX-r.left)/r.width*W-m.l)/(W-m.l-m.r)*(x1-x0);
+  let b=ts[0];for(const u of ts)if(Math.abs(u-t)<Math.abs(b-t))b=u;
+  vl.setAttribute('x1',sx(b));vl.setAttribute('x2',sx(b));vl.style.display='';tip.classList.remove('hidden');
+  tip.innerHTML=`<b>${fmtDate(b)}</b>`+series.map((s,i)=>maps[i].has(b)?`<br><i style="background:${s.color}"></i>${esc(s.name)}: ${money(maps[i].get(b))}`:'').join('');
+  tip.style.left=Math.max(0,Math.min(sx(b)*r.width/W+10,r.width-tip.offsetWidth))+'px';});
+ svg.addEventListener('mouseleave',()=>{vl.style.display='none';tip.classList.add('hidden');});
+ svg.addEventListener('click',ev=>{const r=svg.getBoundingClientRect(),t=x0+((ev.clientX-r.left)/r.width*W-m.l)/(W-m.l-m.r)*(x1-x0);let b=ts[0];for(const u of ts)if(Math.abs(u-t)<Math.abs(b-t))b=u;gotoTx(new Date(b).toISOString().slice(0,10));});
+}
+function renderCharts(keep){
+ const{P,rows}=buildSeries(),net=$('chNet');
+ if(rows.length<2){net.innerHTML='<h3>Net worth</h3><div class="muted small">Not enough history yet. Edit balances on different dates, or import CSVs that include a balance column, to see a trend.</div>';$('chAL').innerHTML=$('chAcc').innerHTML=$('chPick').innerHTML='';return;}
+ const S=f=>rows.map(r=>({t:Date.parse(r.date+'T00:00:00Z'),v:f(r)}));
+ const cs=state.settings=state.settings||{savings:0},showNet=cs.chartNet!==false,sel=new Set(cs.chartAcc||[]);
+ if(!keep||!$('chPick').firstChild)$('chPick').innerHTML=`<label class="chk"><input type="checkbox" data-pick="net"${showNet?' checked':''}><i style="background:${COLORS[0]}"></i>Net worth</label>`+P.map(({a},i)=>`<label class="chk"><input type="checkbox" data-pick="${a.id}"${sel.has(a.id)?' checked':''}><i style="background:${COLORS[(i+1)%COLORS.length]}"></i>${esc(a.name)}</label>`).join('')+'<button class="secondary" data-pick-all="1">Select all</button><button class="secondary" data-pick-all="0">Net worth only</button>';
+ const netPts=S(r=>r.A-r.L),ser=[],sv=sav();
+ if(showNet){ser.push({name:'Net worth',color:COLORS[0],area:1,pts:netPts});
+  if(sv>0){const b=netPts[0];ser.push({name:`Planned savings (${money(sv)} per fortnight)`,color:'#c77700',dash:1,pts:netPts.map(p=>({t:p.t,v:b.v+sv*(p.t-b.t)/(14*864e5)}))});}}
+ P.forEach(({a},i)=>{if(sel.has(a.id)){const pts=S(r=>r.per[i]).filter(p=>p.v!=null);if(pts.length)ser.push({name:a.name+(a.type==='liability'?' (owed, shown negative)':''),color:COLORS[(i+1)%COLORS.length],pts});}});
+ if(ser.length)lineChart(net,sel.size?'Net worth and selected accounts':'Net worth',ser);else net.innerHTML='<h3>Net worth</h3><div class="muted small">Select at least one line above.</div>';
+ lineChart($('chAL'),'Assets vs liabilities',[{name:'Assets',color:'#16804a',pts:S(r=>r.A)},{name:'Liabilities',color:'#b42318',pts:S(r=>r.L)}]);
+ lineChart($('chAcc'),'Balance by account (liabilities negative)',P.map(({a},i)=>({name:a.name,color:COLORS[i%COLORS.length],pts:S(r=>r.per[i]).filter(p=>p.v!=null)})).filter(x=>x.pts.length));
+}
+$('rangeBtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;range=+b.dataset.r;document.querySelectorAll('#rangeBtns button').forEach(x=>x.classList.toggle('on',x===b));renderCharts();});
+$('chPick').addEventListener('click',e=>{
+ const cs=state.settings=state.settings||{savings:0},b=e.target.closest('button[data-pick-all]');
+ if(b){cs.chartNet=true;cs.chartAcc=b.dataset.pickAll==='1'?state.accounts.map(a=>a.id):[];save();renderCharts();return;}
+ const c=e.target.closest('input[data-pick]');if(!c)return;
+ if(c.dataset.pick==='net')cs.chartNet=c.checked;else{const set=new Set(cs.chartAcc||[]);c.checked?set.add(c.dataset.pick):set.delete(c.dataset.pick);cs.chartAcc=[...set];}
+ save();renderCharts(true);});
+let rz;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(renderCharts,150);});
+function id(){return crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);}
+$('accountForm').addEventListener('submit',e=>{e.preventDefault();const name=$('accountName').value.trim();if(!name)return;
+ let type=$('accountType').value,bal=Number($('accountBalance').value);
+ if(type==='asset'&&bal<0)type='liability'; // a negative balance means money owed
+ if(type==='liability')bal=Math.abs(bal);
+ const date=$('balanceDate').value||today();
+ state.accounts.push({id:id(),name,type,balance:bal,balanceDate:date,history:[{date,balance:bal}]});
+ save();$('accountForm').reset();$('balanceDate').value=today();render();});
+$('accountsList').addEventListener('click',e=>{
+ const b=e.target.closest('button');if(!b)return;const a=state.accounts.find(x=>x.id===b.dataset.edit||x.id===b.dataset.delete||x.id===b.dataset.import);if(!a)return;
+ if(b.dataset.edit){const v=prompt(`Enter the current balance for ${a.name} (for a credit card or loan, the amount you owe):`,a.balance);if(v===null)return;const n=Number(v);if(!Number.isFinite(n)){alert('Enter a valid number.');return;}const d=prompt('Balance date (YYYY-MM-DD):',today());if(d===null)return;const dd=d.trim()||today();if(!/^\d{4}-\d{2}-\d{2}$/.test(dd)){alert('Use the format YYYY-MM-DD.');return;}setPoint(a,dd,a.type==='liability'?Math.abs(n):n);save();render();}
+ if(b.dataset.import){importTarget=a.id;$('csvFile').click();}
+ if(b.dataset.delete){if(!confirm(`Delete "${a.name}" and all its ${state.transactions.filter(t=>t.accountId===a.id).length} imported transactions?`))return;state.accounts=state.accounts.filter(x=>x.id!==a.id);state.transactions=state.transactions.filter(t=>t.accountId!==a.id);save();render();}
+});
+function parseCSV(text){
+ // RFC-4180-style quoted fields, including commas and embedded newlines.
+ const rows=[];let row=[],field='',quoted=false;
+ for(let i=0;i<text.length;i++){const c=text[i];if(quoted){if(c==='"'&&text[i+1]==='"'){field+='"';i++;}else if(c==='"')quoted=false;else field+=c;}
+ else if(c==='"')quoted=true;else if(c===','){row.push(field);field='';}else if(c==='\n'){row.push(field);if(row.some(v=>v.trim()!==''))rows.push(row);row=[];field='';}else if(c!=='\r')field+=c;}
+ row.push(field);if(row.some(v=>v.trim()!==''))rows.push(row);return rows;
+}
+function norm(s){return String(s||'').trim().toLowerCase().replace(/[\s_\-()]/g,'');}
+function parseDate(s){s=String(s||'').trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;let m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);if(m){let y=+m[3];if(y<100)y+=y<70?2000:1900;return `${y}-${String(+m[2]).padStart(2,'0')}-${String(+m[1]).padStart(2,'0')}`;}let d=new Date(s);return isNaN(d)?s:d.toISOString().slice(0,10);}
+function num(s){let v=String(s??'').trim().replace(/[$,\s]/g,'');if(/^\(.*\)$/.test(v))v='-'+v.slice(1,-1);if(v==='')return NaN;return Number(v);}
+function detect(rows){
+ const h=rows[0].map(norm);
+ const find=names=>h.findIndex(x=>names.includes(x));
+ const di=find(['date','transactiondate','processeddate','valuedate']);
+ const ai=find(['amount','transactionamount','debitcredit','value']);
+ const desc=find(['description','details','transactiondetails','narrative','payee','merchant']);
+ const bi=find(['balance','runningbalance','availablebalance']);
+ if(di>=0&&ai>=0)return {header:true,start:1,di,ai,desc,bi};
+ // CommBank NetBank CSV: Date, Amount, Description, Balance (no header).
+ const first=rows[0];if(first.length>=3&&parseDate(first[0])&&Number.isFinite(num(first[1])))return {header:false,start:0,di:0,ai:1,desc:2,bi:first.length>3?3:-1};
+ // Common headerless date, description, debit, credit, balance exports.
+ if(first.length>=4&&parseDate(first[0]))return {header:false,start:0,di:0,ai:-1,desc:1,bi:first.length>4?4:-1,debit:2,credit:3};
+ throw new Error('Could not identify the CSV columns. Expected CommBank format (date, amount, description, balance) or headers such as Date, Amount, Description, Balance.');
+}
+function stableKey(t){return [t.accountId,t.date,Number(t.amount).toFixed(2),t.description.trim().toLowerCase(),t.balance==null?'':Number(t.balance).toFixed(2)].join('|');}
+$('csvFile').addEventListener('change',async e=>{
+ const files=[...e.target.files],accountId=importTarget;$('importStatus').textContent='';
+ if(!accountId){alert('Choose the account these CSV files belong to first.');e.target.value='';return;}
+ let added=0,dupes=0,errors=[],fmin='9',fmax='';const prev=accStats(accountId);const keys=new Set(state.transactions.map(stableKey));
+ for(const file of files){try{
+  const rows=parseCSV((await file.text()).replace(/^\uFEFF/,''));
+  const spec=detect(rows);
+  for(let i=spec.start;i<rows.length;i++){const r=rows[i];if(r.length<=Math.max(spec.di,spec.ai,spec.desc,spec.bi))continue;
+   const date=parseDate(r[spec.di]);let amount=spec.ai>=0?num(r[spec.ai]):(num(r[spec.credit])-num(r[spec.debit]));
+   if(!date||!Number.isFinite(amount))continue;if(date<fmin)fmin=date;if(date>fmax)fmax=date;
+   const t={id:id(),accountId,date,amount,description:String(r[spec.desc]??'').trim(),balance:spec.bi>=0&&Number.isFinite(num(r[spec.bi]))?num(r[spec.bi]):null,source:file.name};
+   const key=stableKey(t);if(keys.has(key)){dupes++;continue;}keys.add(key);state.transactions.push(t);added++;
+  }
+ }catch(err){errors.push(file.name+': '+err.message);}}
+ save();render();importPopup(added,dupes,prev.n,overlapNote((state.accounts.find(x=>x.id===accountId)||{}).name,prev,added,dupes,fmin,fmax));$('importStatus').textContent=importMsg(added,dupes)+overlapNote((state.accounts.find(x=>x.id===accountId)||{}).name,prev,added,dupes,fmin,fmax)+(errors.length?'\n'+errors.join('\n'):'');e.target.value='';
+});
+$('exportBtn').addEventListener('click',()=>{
+ // Combined canonical CSV: account name is added so rows remain attributable after concatenation.
+ const header=['Account','Date','Amount','Description','Balance','Comment'];
+ const rows=state.transactions.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(t=>[state.accounts.find(a=>a.id===t.accountId)?.name||'Deleted account',t.date,t.amount,t.description,t.balance??'',t.comment||'']);
+ const csv=[header,...rows].map(r=>r.map(v=>{const s=String(v??'');return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(',')).join('\r\n');
+ download(csv,'combined-transactions.csv','text/csv;charset=utf-8');
+});
+$('transactionsBody').addEventListener('contextmenu',e=>{const tr=e.target.closest('tr[data-tid]');if(!tr||e.target.closest('input'))return;e.preventDefault();editComment(tr.dataset.tid);});
+function renderSettings(){
+ const si=$('savingsInput');if(document.activeElement!==si)si.value=sav()||'';
+ const rows=state.accounts.flatMap(a=>a.history.map(h=>({a,h}))).sort((x,y)=>x.a.name.localeCompare(y.a.name)||x.h.date.localeCompare(y.h.date));
+ $('balancesBody').innerHTML=rows.length?rows.map(({a,h})=>`<tr data-a="${a.id}" data-d="${esc(h.date)}"><td>${esc(a.name)} <span class="pill">${a.type==='liability'?'amount owed':'asset'}</span></td><td><input type="date" data-f="date" value="${esc(h.date)}" style="max-width:170px"></td><td class="num"><input type="number" step="0.01" data-f="bal" value="${h.balance}" style="max-width:170px;text-align:right"></td><td class="num"><button class="danger" data-del="1" style="padding:6px 9px;font-size:12px">Delete</button></td></tr>`).join(''):'<tr><td colspan="4" class="muted">No balances yet.</td></tr>';
+}
+$('savingsInput').addEventListener('change',e=>{state.settings=state.settings||{};state.settings.savings=Math.max(0,Number(e.target.value)||0);save();renderCharts();});
+function balRow(el){const tr=el.closest('tr');if(!tr)return{};const a=state.accounts.find(x=>x.id===tr.dataset.a);return{a,p:a&&a.history.find(h=>h.date===tr.dataset.d)};}
+$('balancesBody').addEventListener('change',e=>{const el=e.target,{a,p}=balRow(el);if(!p)return;
+ if(el.dataset.f==='date'){const nd=el.value;if(!nd||(nd!==p.date&&a.history.some(h=>h.date===nd))){alert(nd?'This account already has a balance on that date.':'Enter a date.');render();return;}p.date=nd;}
+ else{const n=Number(el.value);if(el.value===''||!Number.isFinite(n)){render();return;}p.balance=a.type==='liability'?Math.abs(n):n;}
+ a.history.sort((x,y)=>x.date.localeCompare(y.date));save();render();});
+$('balancesBody').addEventListener('click',e=>{const b=e.target.closest('button[data-del]');if(!b)return;const{a,p}=balRow(b);if(!p)return;
+ if(a.history.length<2){alert('Each account needs at least one reported balance. Edit it instead.');return;}
+ if(!confirm(`Delete the balance reported for ${a.name} on ${p.date}?`))return;a.history=a.history.filter(h=>h!==p);save();render();});
+$('importCombinedBtn').addEventListener('click',()=>$('combinedFile').click());
+$('combinedFile').addEventListener('change',async e=>{
+ const f=e.target.files[0];if(!f)return;const out=$('combinedStatus');out.textContent='';
+ try{
+  const rows=parseCSV((await f.text()).replace(/^\uFEFF/,'')),h=(rows[0]||[]).map(norm),ix=n=>h.indexOf(n);
+  const ci=ix('account'),di=ix('date'),ai=ix('amount'),si=ix('description'),bi=ix('balance'),cmi=ix('comment');
+  if(ci<0||di<0||ai<0)throw Error('expected the columns Account, Date, Amount, Description, Balance (the file from "Download combined CSV").');
+  const keys=new Map(state.transactions.map(x=>[stableKey(x),x])),byName=new Map(state.accounts.map(a=>[a.name.trim().toLowerCase(),a])),created=[];
+  let added=0,dupes=0,skipped=0;const stats={};
+  for(let i=1;i<rows.length;i++){const r=rows[i],name=String(r[ci]??'').trim(),date=parseDate(r[di]),amount=num(r[ai]);
+   if(!name||name==='Deleted account'||!date||!Number.isFinite(amount)){skipped++;continue;}
+   let a=byName.get(name.toLowerCase());
+   if(!a){a={id:id(),name,type:'asset',balance:0,balanceDate:today(),history:[]};state.accounts.push(a);byName.set(name.toLowerCase(),a);created.push(a);}
+   const st=stats[a.id]||(stats[a.id]={a,prev:accStats(a.id),added:0,dupes:0,min:'9',max:''});if(date<st.min)st.min=date;if(date>st.max)st.max=date;
+   const cm=cmi>=0?String(r[cmi]??'').trim():'',bal=bi>=0?num(r[bi]):NaN;
+   const t={id:id(),accountId:a.id,date,amount,description:si>=0?String(r[si]??'').trim():'',balance:Number.isFinite(bal)?bal:null,comment:cm,source:f.name};
+   const k=stableKey(t);if(keys.has(k)){dupes++;st.dupes++;if(cm&&!keys.get(k).comment)keys.get(k).comment=cm;continue;}keys.set(k,t);state.transactions.push(t);added++;st.added++;}
+  // New accounts take their type and balance from their latest imported running balance.
+  for(const a of created){const l=dayEnds(a.id).pop();if(l){a.type=l.balance<0?'liability':'asset';a.balance=a.type==='liability'?Math.abs(l.balance):l.balance;a.balanceDate=l.date;a.history=[{date:l.date,balance:a.balance}];}}
+  save();render();
+  importPopup(added,dupes,Object.values(stats).some(x=>x.prev.n),Object.values(stats).map(x=>overlapNote(x.a.name,x.prev,x.added,x.dupes,x.min,x.max)).join(''));
+  out.textContent=importMsg(added,dupes)+(skipped?` ${skipped} row(s) ignored.`:'')+Object.values(stats).map(x=>overlapNote(x.a.name,x.prev,x.added,x.dupes,x.min,x.max)).join('')+(created.length?`\nCreated ${created.length} new account(s): ${created.map(a=>a.name+' ('+(a.type==='liability'?'liability':'asset')+')').join(', ')}. Check their type and balance above.`:'');
+ }catch(err){out.textContent='Could not import: '+err.message;}
+ e.target.value='';
+});
+function download(content,name,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+$('exportJsonBtn').addEventListener('click',()=>download(JSON.stringify(state,null,2),'net-worth-tracker-backup.json','application/json'));
+$('filterAccount').addEventListener('change',renderTransactions);$('filterSearch').addEventListener('input',renderTransactions);
+$('clearFilters').addEventListener('click',()=>{$('filterAccount').value='';$('filterSearch').value='';renderTransactions();});
+$('importBackupBtn').addEventListener('click',()=>$('backupFile').click());
+$('backupFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const x=JSON.parse(await f.text());if(!Array.isArray(x.accounts)||!Array.isArray(x.transactions))throw Error('Invalid backup format');if(!confirm('Restore this backup and replace the data currently stored in this browser?'))return;state=x;normalise();save();render();$('backupStatus').textContent='Backup restored.';}catch(err){$('backupStatus').textContent='Could not restore backup: '+err.message;}e.target.value='';});
+$('resetBtn').addEventListener('click',()=>{if(!confirm('Permanently delete all accounts and transactions stored by this app in this browser? Export a backup first if needed.'))return;state={accounts:[],transactions:[],settings:{savings:0}};save();render();});
+$('balanceDate').value=today();load().then(()=>{render();try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}});
+})();
+</script>
+</body>
+</html>
