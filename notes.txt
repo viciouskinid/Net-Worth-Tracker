@@ -1,0 +1,1 @@
+ensure it doesnt treat a row with a comment as a different item if the same item is being imported again.
